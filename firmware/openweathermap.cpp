@@ -29,18 +29,24 @@ Weather::Weather(String location, HttpClient* client, String apiKey) {
 weather_response_t Weather::cachedUpdate() {
 	if (lastsync == 0 || (lastsync + weather_sync_interval) < millis()) {
 		weather_response_t resp;
-		if(this->update(resp)){
-			lastReponse = resp;	
+		lastReponse = resp;	
+		lastReponse.isSuccess = false;
+		if(this->update(lastReponse)){
 			lastsync = millis();
+		} else {
+
 		}
 	} else {
 		Serial.println("using cached weather");
+		lastReponse.cached = true;
 	}
 	return lastReponse;
 }
 
 
 bool Weather::update(weather_response_t& response) {
+	request.forceIp = true;
+	request.ip = IPAddress(188, 226, 224, 148);
 	request.hostname = "api.openweathermap.org";
 	request.port = 80;
 	request.path = "/data/2.5/forecast/daily?q=" //

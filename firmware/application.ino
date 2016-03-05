@@ -29,17 +29,14 @@ Weather* weather;
 HttpClient* httpClient;
 
 void setup() {
-	Time.zone(+2.0); // DST / Sommerzeit // TODO: detect DST 
+	Time.zone(+1.0); // +1.0/+2.0 Winer / Sommerzeit // TODO: detect DST 
 	Serial.begin(9600);
 	pinMode(activityLed, OUTPUT);
 
 	// use one httpClient for weather and transportation (save memory)
 	httpClient = new HttpClient();
 
-	// setup led
-	RGB.control(true);
-	RGB.brightness(100);
-
+	
 	// setup lcd                              rs, rw, enable, d4, d5, d6, d7
 	lcd = new Adafruit_CharacterOLED(OLED_V1, D0, D1, D2,     D3, D4, D5, D6);
 	lcd->createChar(degreeSignKey, degreeSignArray);
@@ -55,6 +52,11 @@ void setup() {
 }
 
 void loop() {
+	// setup led
+	RGB.control(true);
+	RGB.brightness(100);
+
+
 	if (updateTimeout > millis()) {
 		// keep the same text & color while waiting
 		return;
@@ -68,24 +70,31 @@ void loop() {
 
 
 	if (lcd != NULL) {
-	// Display design: (16x2 char)
+	// Display layout: (16x2 char)
 	// +----------------+
 	// |14:15 15/22`  5m|
 	// |mod rain     12m|
 	// +----------------+
 		lcd->clear();
 		displayCurrentTime(0, 0);
-		transport.displayDepartures(16, 2); // 16x2 Display
 
-		// print temperature in first row after the time
+		// Transport
+		if(!transport.displayDepartures(16, 2)) { // 16x2 Display
+			lcd->setCursor(16-3,0); //
+			lcd->print("---");
+		}
+
+
+		// Weather
 		weather_response_t resp = weather->cachedUpdate();
 		if ( resp.isSuccess) {
+			// print temperature in first row after the time
 			lcd->setCursor(6, 0); 
 			lcd->print(resp.temp_low);
 			lcd->print("/");
 			lcd->print(resp.temp_high);
 			lcd->write(byte(degreeSignKey));
-			// print descr on new line
+			// print descr on second line
 			lcd->setCursor(0, 1);
 			int iconCode = getConditionIcon(resp.conditionCode);
 			if(iconCode >= 0) {
@@ -94,9 +103,10 @@ void loop() {
 				lcd->write(byte(iconCode));
 			}
 			lcd->print(shortDescr(resp.descr).substring(0,12));
+		} else {
+			lcd->setCursor(0, 1);
+			lcd->print("---");
 		}
-
-
 	}
 
 
